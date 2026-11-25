@@ -1,0 +1,59 @@
+name: Build MiniNotes for Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Get source code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install PySide6 PyInstaller
+
+      - name: Check Python syntax
+        run: python -m py_compile app.py
+
+      - name: Build MiniNotes executable
+        run: |
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name MiniNotes --icon=mininotes.ico --add-data "mininotes.ico;." app.py
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $compiler)) {
+            throw "Inno Setup compiler was not found: $compiler"
+          }
+          & $compiler installer.iss
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: MiniNotes-Windows
+          path: |
+            dist/MiniNotes.exe
+            Output/MiniNotes-Setup.exe
+          if-no-files-found: error
+          retention-days: 30
