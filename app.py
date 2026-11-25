@@ -2079,7 +2079,8 @@ class MiniNotes(QWidget):
 
         # יצירת הממשק
         self.create_interface()
-        # יצירת סמל מגש המערכת לפני רענון הפתקים        self.tray = QSystemTrayIcon(self)
+        # יצירת סמל מגש המערכת לפני רענון הפתקים
+        self.tray = QSystemTrayIcon(self)
 
         if not self.windowIcon().isNull():
             tray_icon = self.windowIcon()
