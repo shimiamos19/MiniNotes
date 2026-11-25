@@ -998,7 +998,6 @@ class NoteEditor(QDialog):
 
     def get_note(self):
         due_value = None
-
         if self.due_check.isChecked():
             date = self.get_selected_date()            time = self.get_selected_time()
             due_value = datetime(
@@ -1997,8 +1996,7 @@ class SettingsDialog(QDialog):
             self,
             tr("choose_backup"),
             "",
-            tr("backup_file")
-        )
+            tr("backup_file")        )
 
         if not path:
             return
@@ -2947,9 +2945,6 @@ class MiniNotes(QWidget):
         if note is None:
             return
 
-        if note.get("floating_minimized", False):
-            return
-
         note["floating_geometry"] = [
             geometry.x(),
             geometry.y(),
@@ -2997,8 +2992,7 @@ class MiniNotes(QWidget):
             self.show_main_window
         )
 
-        floating_menu = menu.addMenu(
-            tr("floating_notes")
+        floating_menu = menu.addMenu(            tr("floating_notes")
         )
 
         floating_notes = [
