@@ -146,6 +146,7 @@ TEXT = {
         "remove_floating": "הסר משולחן העבודה",
         "floating_edit": "עריכה",
         "floating_minimize": "מזעור",
+        "floating_restore": "הרחבה",
         "floating_close": "סגירה",
         "floating_notes": "פתקים צפים",
         "no_floating": "אין כרגע פתקים צפים.",
@@ -242,6 +243,7 @@ TEXT = {
         "remove_floating": "Remove from desktop",
         "floating_edit": "Edit",
         "floating_minimize": "Minimize",
+        "floating_restore": "Restore",
         "floating_close": "Close",
         "floating_notes": "Floating notes",
         "no_floating": "There are no floating notes.",
@@ -338,6 +340,7 @@ TEXT = {
         "remove_floating": "Убрать с рабочего стола",
         "floating_edit": "Изменить",
         "floating_minimize": "Свернуть",
+        "floating_restore": "Развернуть",
         "floating_close": "Закрыть",
         "floating_notes": "Плавающие заметки",
         "no_floating": "Нет плавающих заметок.",
@@ -998,7 +1001,6 @@ class NoteEditor(QDialog):
 
         if self.due_check.isChecked():
             date = self.get_selected_date()            time = self.get_selected_time()
-
             due_value = datetime(
                 date.year(),
                 date.month(),
@@ -1191,6 +1193,9 @@ class FloatingNote(QWidget):
             offset = len(parent.floating_windows) * 30
             self.move(100 + offset, 100 + offset)
 
+        self.normal_geometry = self.geometry()
+        self.is_collapsed = False
+
         self.geometry_timer = QTimer(self)
         self.geometry_timer.setSingleShot(True)
         self.geometry_timer.timeout.connect(
@@ -1199,6 +1204,7 @@ class FloatingNote(QWidget):
 
     def create_interface(self, note):
         root = QVBoxLayout(self)
+        self.root_layout = root
         root.setContentsMargins(9, 8, 9, 5)
         root.setSpacing(4)
 
@@ -1237,6 +1243,7 @@ class FloatingNote(QWidget):
         """)
 
         paper_layout = QVBoxLayout(paper)
+        self.paper_layout = paper_layout
         paper_layout.setContentsMargins(10, 8, 10, 8)
         paper_layout.setSpacing(7)
 
@@ -1266,7 +1273,7 @@ class FloatingNote(QWidget):
         )
 
         self.minimize_button.clicked.connect(
-            self.minimize_note
+            self.toggle_minimized
         )
 
         self.close_button.clicked.connect(
@@ -1310,6 +1317,7 @@ class FloatingNote(QWidget):
         resize_row.addWidget(resize_grip)
 
         root.addLayout(resize_row)
+        self.resize_grip = resize_grip
 
         self.update_note(note)
 
@@ -1383,6 +1391,78 @@ class FloatingNote(QWidget):
             self.note_id
         )
 
+    def toggle_minimized(self):
+        if self.is_collapsed:
+            self.main_window.restore_floating_note(
+                self.note_id
+            )
+        else:
+            self.main_window.minimize_floating_note(
+                self.note_id
+            )
+
+    def collapse_note(self):
+        if self.is_collapsed:
+            self.show()
+            return
+
+        self.geometry_timer.stop()
+        self.normal_geometry = self.geometry()
+        self.save_geometry()
+        self.is_collapsed = True
+
+        self.edit_button.hide()
+        self.content_label.hide()
+        self.due_label.hide()
+        self.resize_grip.hide()
+
+        self.minimize_button.setText("↗")
+        self.minimize_button.setToolTip(tr("floating_restore"))
+
+        self.title_label.setWordWrap(False)
+        self.root_layout.setContentsMargins(5, 4, 5, 4)
+        self.root_layout.setSpacing(0)
+        self.paper_layout.setContentsMargins(8, 4, 8, 4)
+        self.paper_layout.setSpacing(0)
+
+        self.setMinimumSize(190, 42)
+        self.setMaximumHeight(58)
+        self.resize(max(230, self.width()), 54)
+
+        self.show()
+        self.raise_()
+
+    def expand_note(self):
+        if not self.is_collapsed:
+            self.show()
+            return
+
+        self.is_collapsed = False
+        self.setMaximumHeight(16777215)
+        self.setMinimumSize(230, 180)
+
+        self.edit_button.show()
+        self.content_label.show()
+        self.due_label.show()
+        self.resize_grip.show()
+
+        self.minimize_button.setText("−")
+        self.minimize_button.setToolTip(tr("floating_minimize"))
+
+        self.title_label.setWordWrap(True)
+        self.root_layout.setContentsMargins(9, 8, 9, 5)
+        self.root_layout.setSpacing(4)
+        self.paper_layout.setContentsMargins(10, 8, 10, 8)
+        self.paper_layout.setSpacing(7)
+
+        if self.normal_geometry is not None:
+            self.setGeometry(self.normal_geometry)
+
+        self.show()
+        self.raise_()
+        self.activateWindow()
+        self.geometry_timer.start(300)
+
     def remove_note(self):
         self.main_window.stop_floating_note(
             self.note_id
@@ -1427,6 +1507,10 @@ class FloatingNote(QWidget):
             self.geometry_timer.start(400)
 
     def save_geometry(self):
+        if self.is_collapsed:
+            return
+
+        self.normal_geometry = self.geometry()
         self.main_window.update_floating_geometry(
             self.note_id,
             self.geometry()
@@ -1997,8 +2081,7 @@ class MiniNotes(QWidget):
 
         # יצירת הממשק
         self.create_interface()
-        # יצירת סמל מגש המערכת לפני רענון הפתקים
-        self.tray = QSystemTrayIcon(self)
+        # יצירת סמל מגש המערכת לפני רענון הפתקים        self.tray = QSystemTrayIcon(self)
 
         if not self.windowIcon().isNull():
             tray_icon = self.windowIcon()
@@ -2790,10 +2873,10 @@ class MiniNotes(QWidget):
         window = self.floating_windows.get(note_id)
 
         if window:
-            window.save_geometry()
-            window.hide()
+            window.collapse_note()
 
         self.save_notes()
+        self.refresh_notes()
         self.build_tray_menu()
 
     def restore_floating_note(self, note_id):
@@ -2818,22 +2901,33 @@ class MiniNotes(QWidget):
         else:
             window.update_note(note)
 
-        window.show()
-        window.raise_()
-        window.activateWindow()
+        if window.is_collapsed:
+            window.expand_note()
+        else:
+            window.show()
+            window.raise_()
+            window.activateWindow()
 
         self.save_notes()
         self.build_tray_menu()
 
     def restore_floating_notes(self):
         for note in self.notes:
-            if (
-                note.get("floating", False)
-                and not note.get(
-                    "floating_minimized",
-                    False
-                )
-            ):
+            if not note.get("floating", False):
+                continue
+
+            note_id = note["id"]
+
+            if note.get("floating_minimized", False):
+                window = self.floating_windows.get(note_id)
+
+                if window is None:
+                    window = FloatingNote(self, note)
+                    self.floating_windows[note_id] = window
+
+                window.update_note(note)
+                window.collapse_note()
+            else:
                 self.start_floating_note(note)
 
         self.build_tray_menu()
@@ -2851,6 +2945,9 @@ class MiniNotes(QWidget):
         note = self.get_note_by_id(note_id)
 
         if note is None:
+            return
+
+        if note.get("floating_minimized", False):
             return
 
         note["floating_geometry"] = [
@@ -2997,8 +3094,7 @@ class MiniNotes(QWidget):
                 note_id = note["id"]
 
                 action.triggered.connect(
-                    lambda checked=False, current_id=note_id:
-                    self.restore_floating_note(current_id)
+                    lambda checked=False, current_id=note_id:                    self.restore_floating_note(current_id)
                 )
 
             menu.addSeparator()
