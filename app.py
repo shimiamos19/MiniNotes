@@ -997,8 +997,7 @@ class NoteEditor(QDialog):
         due_value = None
 
         if self.due_check.isChecked():
-            date = self.get_selected_date()
-            time = self.get_selected_time()
+            date = self.get_selected_date()            time = self.get_selected_time()
 
             due_value = datetime(
                 date.year(),
@@ -1974,71 +1973,71 @@ class SettingsDialog(QDialog):
             )
 
 
-def __init__(self):
-    super().__init__()
+class MiniNotes(QWidget):
+    def __init__(self):
+        super().__init__()
 
-    self.settings = load_settings()
+        self.settings = load_settings()
 
-    CURRENT_SETTINGS.clear()
-    CURRENT_SETTINGS.update(self.settings)
+        CURRENT_SETTINGS.clear()
+        CURRENT_SETTINGS.update(self.settings)
 
-    self.notes = load_notes()
-    self.notified = set()
+        self.notes = load_notes()
+        self.notified = set()
 
-    self.floating_windows = {}
+        self.floating_windows = {}
 
-    self.setWindowTitle("MiniNotes")
-    self.setMinimumSize(850, 620)
-    self.setLayoutDirection(direction())
+        self.setWindowTitle("MiniNotes")
+        self.setMinimumSize(850, 620)
+        self.setLayoutDirection(direction())
 
-    self.setWindowIcon(
-        QIcon(resource_path("mininotes.ico"))
-    )
-
-    # יצירת הממשק
-    self.create_interface()
-
-    # יצירת סמל מגש המערכת לפני רענון הפתקים
-    self.tray = QSystemTrayIcon(self)
-
-    if not self.windowIcon().isNull():
-        tray_icon = self.windowIcon()
-    else:
-        tray_icon = QApplication.style().standardIcon(
-            QStyle.StandardPixmap.SP_ComputerIcon
+        self.setWindowIcon(
+            QIcon(resource_path("mininotes.ico"))
         )
 
-    self.tray.setIcon(tray_icon)
+        # יצירת הממשק
+        self.create_interface()
+        # יצירת סמל מגש המערכת לפני רענון הפתקים
+        self.tray = QSystemTrayIcon(self)
 
-    self.tray.setVisible(
-        QSystemTrayIcon.isSystemTrayAvailable()
-    )
+        if not self.windowIcon().isNull():
+            tray_icon = self.windowIcon()
+        else:
+            tray_icon = QApplication.style().standardIcon(
+                QStyle.StandardPixmap.SP_ComputerIcon
+            )
 
-    self.tray.activated.connect(
-        self.tray_activated
-    )
+        self.tray.setIcon(tray_icon)
 
-    # כעת ניתן לרענן את הפתקים בבטחה
-    self.refresh_notes()
+        self.tray.setVisible(
+            QSystemTrayIcon.isSystemTrayAvailable()
+        )
 
-    self.build_tray_menu()
+        self.tray.activated.connect(
+            self.tray_activated
+        )
 
-    # הפעלת מערכת ההתראות
-    self.notification_timer = QTimer(self)
+        # כעת ניתן לרענן את הפתקים בבטחה
+        self.refresh_notes()
 
-    self.notification_timer.timeout.connect(
-        self.check_notifications
-    )
+        self.build_tray_menu()
 
-    self.notification_timer.start(15000)
+        # הפעלת מערכת ההתראות
+        self.notification_timer = QTimer(self)
 
-    self.apply_style()
+        self.notification_timer.timeout.connect(
+            self.check_notifications
+        )
 
-    # שחזור פתקים צפים לאחר טעינת הממשק
-    QTimer.singleShot(
-        300,
-        self.restore_floating_notes
-    )
+        self.notification_timer.start(15000)
+
+        self.apply_style()
+
+        # שחזור פתקים צפים לאחר טעינת הממשק
+        QTimer.singleShot(
+            300,
+            self.restore_floating_notes
+        )
     def create_interface(self):
 
         root = QVBoxLayout(self)
