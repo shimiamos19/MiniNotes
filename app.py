@@ -999,7 +999,8 @@ class NoteEditor(QDialog):
     def get_note(self):
         due_value = None
         if self.due_check.isChecked():
-            date = self.get_selected_date()            time = self.get_selected_time()
+            date = self.get_selected_date()
+            time = self.get_selected_time()
             due_value = datetime(
                 date.year(),
                 date.month(),
